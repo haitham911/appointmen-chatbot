@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppointmentBot</title>
+    <style>
+        #chatbox div {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat with AppointmentBot</h1>
+    <div id="chatbox"></div>
+    <input type="text" id="message" placeholder="Type a message">
+    <button onclick="sendMessage()">Send</button>
+
+    <h2>Book an Appointment</h2>
+    <form id="appointmentForm">
+        <label for="name">Name:</label><br>
+        <input type="text" id="name" name="name"><br>
+        <label for="email">Email:</label><br>
+        <input type="email" id="email" name="email"><br>
+        <label for="department">Department:</label><br>
+        <input type="text" id="department" name="department"><br>
+        <label for="doctor">Doctor:</label><br>
+        <input type="text" id="doctor" name="doctor"><br>
+        <label for="time">Time:</label><br>
+        <input type="text" id="time" name="time"><br>
+        <label for="address">Address:</label><br>
+        <input type="text" id="address" name="address"><br>
+        <button type="button" onclick="bookAppointment()">Book Appointment</button>
+    </form>
+
+    <h2>Appointments</h2>
+    <button onclick="getAppointments()">View Appointments</button>
+    <div id="appointments"></div>
+
+    <script>
+        let ws = new WebSocket("ws://localhost:8080/ws");
+
+        ws.onmessage = function(event) {
+            let chatbox = document.getElementById('chatbox');
+            let message = document.createElement('div');
+            message.textContent = "Bot: " + event.data;
+            chatbox.appendChild(message);
+        };
+
+        document.getElementById('message').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function sendMessage() {
+            let input = document.getElementById('message');
+            let message = input.value;
+            input.value = '';
+
+            let chatbox = document.getElementById('chatbox');
+            let userMessage = document.createElement('div');
+            userMessage.textContent = "You: " + message;
+            chatbox.appendChild(userMessage);
+
+            ws.send(message);
+        }
+
+        function bookAppointment() {
+            let form = document.getElementById('appointmentForm');
+            let formData = new FormData(form);
+
+            let data = {};
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
+
+            fetch('http://localhost:8080/book', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function getAppointments() {
+            fetch('http://localhost:8080/appointments')
+            .then(response => response.json())
+            .then(data => {
+                let appointmentsDiv = document.getElementById('appointments');
+                appointmentsDiv.innerHTML = '';
+
+                data.forEach(appointment => {
+                    let appointmentDiv = document.createElement('div');
+                    appointmentDiv.textContent = `Name: ${appointment.Name}, Email: ${appointment.Email}, Department: ${appointment.Department}, Doctor: ${appointment.Doctor}, Time: ${appointment.Time}, Address: ${appointment.Address}`;
+                    appointmentsDiv.appendChild(appointmentDiv);
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>
